@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>🎰 QB Restaurant Roulette</title>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-GGYZJTFWZ4"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-GGYZJTFWZ4');
+</script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #ffffff; color: #1a1a1a; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 24px 16px; }
@@ -264,6 +272,14 @@ function spin() {
       angle = ((target % (2*Math.PI)) + 2*Math.PI) % (2*Math.PI);
       spinning = false;
       document.getElementById('spinBtn').disabled = false;
+      gtag('event', 'spin', {
+        winner: filtered[winIdx].name,
+        health_tier: filtered[winIdx].health,
+        cuisine: filtered[winIdx].cuisine,
+        filter_health: document.getElementById('filterHealth').value,
+        filter_cuisine: document.getElementById('filterCuisine').value,
+        filter_dist: document.getElementById('filterDist').value,
+      });
       showResult(filtered[winIdx]);
     }
   })(t0);
@@ -285,7 +301,10 @@ function showResult(r) {
 }
 
 ['filterHealth','filterCuisine','filterDist'].forEach(id =>
-  document.getElementById(id).addEventListener('change', updateUI)
+  document.getElementById(id).addEventListener('change', (e) => {
+    updateUI();
+    gtag('event', 'filter_change', { filter_name: id, filter_value: e.target.value });
+  })
 );
 updateUI();
 </script>
