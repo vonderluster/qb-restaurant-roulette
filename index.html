@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎰 QB Restaurant Roulette</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f0f13; color: #fff; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 24px 16px; }
+  h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 4px; }
+  .subtitle { color: #888; font-size: 0.82rem; margin-bottom: 24px; }
+  .filters { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 16px; }
+  .filter-group { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .filter-label { font-size: 0.65rem; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
+  select { background: #1e1e28; color: #fff; border: 1px solid #333; border-radius: 8px; padding: 7px 12px; font-size: 0.8rem; cursor: pointer; outline: none; }
+  select:focus { border-color: #6c63ff; }
+  .count-badge { font-size: 0.72rem; color: #6c63ff; margin-bottom: 16px; }
+  .wheel-wrap { position: relative; width: 300px; height: 300px; margin-bottom: 20px; }
+  canvas { border-radius: 50%; box-shadow: 0 0 50px rgba(108,99,255,0.25); }
+  .pointer { position: absolute; top: -16px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 11px solid transparent; border-right: 11px solid transparent; border-top: 24px solid #ff6b6b; filter: drop-shadow(0 2px 6px rgba(255,107,107,0.6)); z-index: 10; }
+  .spin-btn { background: linear-gradient(135deg, #6c63ff, #ff6b6b); border: none; border-radius: 50px; color: #fff; font-size: 1rem; font-weight: 700; padding: 13px 44px; cursor: pointer; transition: transform 0.1s, opacity 0.2s; letter-spacing: 0.5px; box-shadow: 0 4px 24px rgba(108,99,255,0.4); }
+  .spin-btn:hover { transform: scale(1.04); }
+  .spin-btn:active { transform: scale(0.97); }
+  .spin-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .result-card { display: none; margin-top: 24px; background: #1e1e28; border: 1px solid #2a2a3a; border-radius: 16px; padding: 18px 22px; width: 100%; max-width: 360px; animation: fadeIn 0.4s ease; }
+  .result-card.show { display: block; }
+  @keyframes fadeIn { from { opacity:0; transform: translateY(12px); } to { opacity:1; transform: translateY(0); } }
+  .result-name { font-size: 1.15rem; font-weight: 700; margin-bottom: 3px; }
+  .result-meta { font-size: 0.75rem; color: #888; margin-bottom: 10px; }
+  .result-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .tag { font-size: 0.7rem; padding: 3px 9px; border-radius: 20px; font-weight: 600; }
+  .tag-green { background: #1a3a1a; color: #4caf50; border: 1px solid #2d5a2d; }
+  .tag-yellow { background: #3a3a1a; color: #ffca28; border: 1px solid #5a5a2d; }
+  .tag-red { background: #3a1a1a; color: #ef5350; border: 1px solid #5a2d2d; }
+  .tag-blue { background: #1a2a3a; color: #64b5f6; border: 1px solid #2d4a5a; }
+  .tag-purple { background: #1a1a3a; color: #a78bfa; border: 1px solid #3a3a6a; }
+  .section-label { font-size: 0.65rem; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; margin-top: 10px; }
+  .section-text { font-size: 0.82rem; color: #ccc; line-height: 1.4; }
+  .empty-msg { color: #666; font-size: 0.85rem; margin-top: 12px; }
+  .maps-link { display: inline-block; margin-top: 14px; font-size: 0.75rem; color: #6c63ff; text-decoration: none; border: 1px solid #3a3aff44; border-radius: 8px; padding: 5px 12px; }
+  .maps-link:hover { background: #1a1a3a; }
+</style>
+</head>
+<body>
+
+<h1>🎰 Restaurant Roulette</h1>
+<p class="subtitle">QB / Taikoo Lunch Picker &nbsp;鰂魚涌午餐轉盤</p>
+
+<div class="filters">
+  <div class="filter-group">
+    <span class="filter-label">Health Tier</span>
+    <select id="filterHealth">
+      <option value="all">All 🟢🟡🔴</option>
+      <option value="green">🟢 Healthiest</option>
+      <option value="yellow">🟡 Moderate</option>
+      <option value="red">🔴 Indulge</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <span class="filter-label">Cuisine</span>
+    <select id="filterCuisine">
+      <option value="all">All Cuisines</option>
+      <option value="Japanese">🍣 Japanese</option>
+      <option value="Vietnamese">🍜 Vietnamese</option>
+      <option value="Cantonese">🥟 Cantonese / Dim Sum</option>
+      <option value="Korean">🥩 Korean</option>
+      <option value="Southeast Asian">🌿 SE Asian / Malaysian</option>
+      <option value="Chinese">🍚 Chinese / Shanghai</option>
+      <option value="Western">🍝 Western / Mediterranean</option>
+      <option value="Indian">🍛 Indian Fusion</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <span class="filter-label">Distance</span>
+    <select id="filterDist">
+      <option value="all">Any Distance</option>
+      <option value="close">Under 200m 🚶</option>
+      <option value="medium">Under 400m</option>
+      <option value="kornhill">Exclude Kornhill</option>
+    </select>
+  </div>
+</div>
+
+<p class="count-badge" id="countBadge">Loading...</p>
+
+<div class="wheel-wrap">
+  <div class="pointer"></div>
+  <canvas id="wheel" width="300" height="300"></canvas>
+</div>
+
+<button class="spin-btn" id="spinBtn" onclick="spin()">🎰 &nbsp;SPIN!</button>
+<p class="empty-msg" id="emptyMsg" style="display:none">No restaurants match. Try broadening your filters!</p>
+
+<div class="result-card" id="resultCard">
+  <div class="result-name" id="rName"></div>
+  <div class="result-meta" id="rMeta"></div>
+  <div class="result-row" id="rTags"></div>
+  <div class="section-label">💚 Healthy Picks</div>
+  <div class="section-text" id="rHealthy"></div>
+  <div class="section-label">⚠️ Watch Out For</div>
+  <div class="section-text" id="rWatch"></div>
+  <div class="section-label">📍 Address</div>
+  <div class="section-text" id="rAddr"></div>
+  <a class="maps-link" id="rMaps" href="#" target="_blank">🗺️ Open in Google Maps</a>
+</div>
+
+<script>
+const R = [
+  {name:"Kyouichi 京一",cuisine:"Japanese",health:"green",dist:400,google:4.3,openrice:4.0,healthy:"Sashimi don | Miso cod | Seasonal salad set",watch:"Fried rice | Cream sauces",addr:"G/F, 939 King's Rd"},
+  {name:"Shuran 秋嵐",cuisine:"Japanese",health:"green",dist:300,google:4.1,openrice:4.0,healthy:"Beef tongue set | Miso soup | Salad",watch:"Sukiyaki (higher calorie)",addr:"B72, 1010 King's Rd"},
+  {name:"AKIYOSHI 秋吉",cuisine:"Japanese",health:"green",dist:170,google:null,openrice:4.0,healthy:"Grilled chicken skewers | Vegetable skewers | Edamame",watch:"Fatty cuts | Fried sides",addr:"G01, G/F, 25 Westlands Rd"},
+  {name:"Sugidama 杉玉",cuisine:"Japanese",health:"green",dist:220,google:null,openrice:4.0,healthy:"Grilled skewers | Tofu dishes | Edamame",watch:"Fried izakaya snacks | Sake",addr:"Shop 3-5, G/F, 12 Westlands Rd"},
+  {name:"Shugetsu 周月",cuisine:"Japanese",health:"green",dist:350,google:3.7,openrice:3.7,healthy:"Shoyu ramen | Lighter broth options",watch:"Tonkotsu rich broths | Fatty toppings",addr:"G/F, 30 Hoi Kwong St"},
+  {name:"Karui Bento かるい辨當",cuisine:"Japanese",health:"green",dist:60,google:null,openrice:null,healthy:"Grilled protein bento | Balanced rice & veg",watch:"Fried bento options",addr:"Quarry Bay (near Taikoo)"},
+  {name:"asiri HOKKAIDO",cuisine:"Japanese",health:"green",dist:120,google:null,openrice:null,healthy:"Fresh Hokkaido seafood | Sashimi",watch:"Rich dairy-based dishes",addr:"Shop 1A, G/F, 11 Hoi Kwong St"},
+  {name:"Ulva Ramen",cuisine:"Japanese",health:"green",dist:180,google:null,openrice:null,healthy:"Shoyu/shio broth | Extra veg toppings",watch:"Tonkotsu | Butter corn",addr:"Quarry Bay"},
+  {name:"UURO",cuisine:"Japanese",health:"green",dist:230,google:null,openrice:null,healthy:"Japanese set meals | Lighter options",watch:"Fried dishes",addr:"Quarry Bay"},
+  {name:"#FOTD 日食",cuisine:"Japanese",health:"green",dist:110,google:null,openrice:null,healthy:"Japanese lunch sets | Rice bowls",watch:"Fried items",addr:"Quarry Bay"},
+  {name:"As Yu Wish Sushi 如願壽司",cuisine:"Japanese",health:"green",dist:300,google:null,openrice:null,healthy:"Nigiri | Sashimi | Maki rolls",watch:"Tempura rolls | Spicy mayo",addr:"Quarry Bay"},
+  {name:"Enitsu Bar & Grill 炎津",cuisine:"Japanese",health:"green",dist:230,google:null,openrice:null,healthy:"Grilled fish | Lean meat cuts | Edamame",watch:"Heavy bar snacks | Alcohol",addr:"Quarry Bay"},
+  {name:"Room Sawa 番茄咖喱烏冬",cuisine:"Japanese",health:"green",dist:150,google:null,openrice:null,healthy:"Tomato curry udon | Lighter ramen broths",watch:"Rich curry ramen | Fried toppings",addr:"Quarry Bay (near Taikoo MTR)"},
+  {name:"幕多拉麵 Camping Kitchen",cuisine:"Japanese",health:"yellow",dist:999,google:null,openrice:null,healthy:"Lighter broth ramen | Shoyu/shio | Extra veg",watch:"Rich tonkotsu | Fried toppings | Butter/cream",addr:"Kornhill Plaza, 1-2 Kornhill Rd"},
+  {name:"Tokyo Cafe & Kitchen 東京Kitchen",cuisine:"Japanese",health:"yellow",dist:999,google:null,openrice:null,healthy:"Japanese curry rice | Udon sets | Miso soup",watch:"Katsu curry (fried) | Rich eel rice",addr:"G/F, AEON Style, Kornhill Plaza South"},
+  {name:"Viet's Taste 越之廚",cuisine:"Vietnamese",health:"green",dist:200,google:4.1,openrice:4.0,healthy:"Pho | Bánh mì | Fresh spring rolls",watch:"Coconut-based desserts",addr:"6 Hoi Kwong St"},
+  {name:"An Nam Pho 安南",cuisine:"Vietnamese",health:"green",dist:140,google:null,openrice:3.5,healthy:"Beef pho | Fresh spring rolls | Clear broth",watch:"Fried spring rolls",addr:"G/F, Dragon View House, 6-16 Hoi Tai St"},
+  {name:"GOC VIET 越南語角",cuisine:"Vietnamese",health:"green",dist:140,google:null,openrice:3.5,healthy:"Fresh spring rolls | Spicy beef noodles",watch:"Fried options | Sweet drinks",addr:"Shop 3B, Dragon View House, 10 Hoi Tai St"},
+  {name:"DALAT Vietnamese",cuisine:"Vietnamese",health:"green",dist:70,google:null,openrice:null,healthy:"Vietnamese soups | Grilled meats | Fresh rolls",watch:"Fried items",addr:"27 Hoi Wan St"},
+  {name:"Yu Sum Vietnamese 漁心",cuisine:"Vietnamese",health:"green",dist:270,google:null,openrice:null,healthy:"Pho | Rice noodle dishes | Fresh salads",watch:"Fried items",addr:"Quarry Bay"},
+  {name:"Pho Saigon 西貢河粉",cuisine:"Vietnamese",health:"green",dist:60,google:null,openrice:null,healthy:"Classic pho | Bún dishes",watch:"Heavy add-ons | Fried sides",addr:"Quarry Bay"},
+  {name:"Mint & Basil 薄荷羅勒",cuisine:"Southeast Asian",health:"green",dist:600,google:4.3,openrice:4.0,healthy:"Green mango salad | Grilled squid | Stir-fried ho fun",watch:"Coconut milk curries | Cocktails",addr:"G/F Site A, Lei King Wan, Sai Wan Ho"},
+  {name:"Chan Yi Hing 陳儀興",cuisine:"Cantonese",health:"yellow",dist:500,google:4.4,openrice:4.4,healthy:"Braised goose | Steamed fish | Oyster congee",watch:"Fried oyster pancake | Deep-fried dishes",addr:"7/F, 1001 King's Rd"},
+  {name:"Lung Dim Sum 龍燊",cuisine:"Cantonese",health:"yellow",dist:500,google:4.4,openrice:4.0,healthy:"Truffle shrimp dumpling | Steamed dim sum | Fish dishes",watch:"Fried dim sum | Smoked duck",addr:"8/F, 1001 King's Rd"},
+  {name:"Moon Palace 望月樓",cuisine:"Cantonese",health:"yellow",dist:450,google:4.2,openrice:4.0,healthy:"Steamed dim sum | Wonton soup | Congee",watch:"Baked pork chop rice | Roast goose",addr:"2/F, 683 King's Rd"},
+  {name:"Yat Lung Heen 逸龍軒",cuisine:"Cantonese",health:"yellow",dist:700,google:4.2,openrice:4.0,healthy:"Steamed seafood | Dim sum | Congee",watch:"Rich braised dishes | Fried items",addr:"3/F, Harbour Plaza North Point, 665 King's Rd"},
+  {name:"Congee & Noodle by Lubuds",cuisine:"Cantonese",health:"yellow",dist:400,google:null,openrice:4.0,healthy:"Plain congee | Wonton noodle soup",watch:"Fried noodles | Heavy toppings",addr:"Quarry Bay"},
+  {name:"Jin Gong Guan 金公館",cuisine:"Cantonese",health:"yellow",dist:999,google:null,openrice:null,healthy:"Steamed dim sum | Congee | Stir-fried veg",watch:"Fried dim sum | Rich braised dishes",addr:"Shop T4, 3/F, Kornhill Plaza North"},
+  {name:"Downstairs Cafe 樓下餐廳",cuisine:"Cantonese",health:"yellow",dist:300,google:3.7,openrice:3.5,healthy:"Tomato soup noodles | Macaroni soup | Congee",watch:"Greasy breakfast sets | HK milk tea",addr:"967 King's Rd"},
+  {name:"Milk Cafe 米奶餐廳",cuisine:"Cantonese",health:"yellow",dist:220,google:2.6,openrice:null,healthy:"Chinese dinner sets",watch:"Salty dishes | Large rice portions",addr:"12 Westlands Rd"},
+  {name:"Mei Lik Cafe 美力",cuisine:"Cantonese",health:"yellow",dist:170,google:null,openrice:null,healthy:"Soup noodles | Congee | Simple sets",watch:"Fried items | High sugar milk tea",addr:"Quarry Bay"},
+  {name:"Mon Kee Cafe 萬記",cuisine:"Cantonese",health:"yellow",dist:210,google:null,openrice:null,healthy:"Noodle soups | Simple HK cafe dishes",watch:"Greasy breakfast sets",addr:"Quarry Bay"},
+  {name:"Hollywood Cafe 好萊塢",cuisine:"Cantonese",health:"yellow",dist:350,google:null,openrice:null,healthy:"Soup-based dishes | Simple sets",watch:"Fried options | Sugary drinks",addr:"Quarry Bay"},
+  {name:"Islet Coffee Lab 小島",cuisine:"Cantonese",health:"yellow",dist:220,google:null,openrice:null,healthy:"Black coffee | Light snacks",watch:"Sweet lattes | Pastries",addr:"Quarry Bay"},
+  {name:"Myung Ga Korean 明家",cuisine:"Korean",health:"yellow",dist:400,google:3.7,openrice:3.5,healthy:"Bibimbap | Kimchi sides | Lean grilled meats",watch:"Marbled fatty beef | Korean fried chicken",addr:"18 Tai Koo Shing Rd, Cityplaza"},
+  {name:"Malayan Restaurant 馬來西亞",cuisine:"Southeast Asian",health:"yellow",dist:350,google:null,openrice:null,healthy:"Chicken satay | Clear laksa | Stir-fried veg",watch:"Coconut milk curries | Nasi lemak",addr:"Quarry Bay"},
+  {name:"Penang toujours 檳城",cuisine:"Southeast Asian",health:"yellow",dist:110,google:null,openrice:null,healthy:"Penang assam laksa (lighter sour broth)",watch:"Coconut curry laksa | Fried snacks",addr:"Quarry Bay"},
+  {name:"SOUTH LANE 南巷",cuisine:"Southeast Asian",health:"yellow",dist:60,google:null,openrice:null,healthy:"Fresh Asian dishes | Lighter options",watch:"Rich curries",addr:"Quarry Bay"},
+  {name:"The Soulmei 尚美",cuisine:"Chinese",health:"yellow",dist:400,google:4.5,openrice:4.5,healthy:"BBQ meats | Braised options",watch:"Fried sides | Heavy sauces",addr:"Shop B&B1, 860-878 King's Rd"},
+  {name:"Chicken Factory 雞工廠",cuisine:"Chinese",health:"yellow",dist:300,google:null,openrice:null,healthy:"Roast chicken | Lighter rice dishes",watch:"Fried items",addr:"Shop SLG6, 12 Westlands Rd"},
+  {name:"Grand Cuisine Shanghai 上海廚房",cuisine:"Chinese",health:"yellow",dist:350,google:null,openrice:null,healthy:"Steamed dumplings | Tofu dishes | Cold appetisers",watch:"Red-braised pork | Oily rice cakes",addr:"Quarry Bay"},
+  {name:"Sifu Restaurant 師父飯堂",cuisine:"Chinese",health:"yellow",dist:350,google:null,openrice:null,healthy:"Steamed/braised toppings rice | Veg dishes",watch:"Fried options | Salty sauces",addr:"Quarry Bay"},
+  {name:"In noodle 麵在",cuisine:"Chinese",health:"yellow",dist:80,google:null,openrice:null,healthy:"Broth-based noodle soups",watch:"Fried noodles | Heavy sauces",addr:"Quarry Bay"},
+  {name:"Red Star Restaurant 紅星",cuisine:"Chinese",health:"yellow",dist:750,google:null,openrice:null,healthy:"Steamed and braised dishes",watch:"Fried dishes | Heavy fare",addr:"Quarry Bay area"},
+  {name:"Shabu Sai 菜菜鍋",cuisine:"Japanese",health:"yellow",dist:999,google:null,openrice:null,healthy:"Vegetable-heavy hot pot | Lean meat cuts",watch:"Marbled beef | Rich broth | Overeating risk",addr:"Shop T2, 3/F, Kornhill Plaza North"},
+  {name:"Sage & Salt",cuisine:"Indian",health:"yellow",dist:200,google:4.4,openrice:4.0,healthy:"Pork neck salad | Tandoori chicken | Laksa",watch:"Biryani (rich) | Lamb shank | Cocktails",addr:"Shop 5, G/F, PCCW Tower, 979 King's Rd"},
+  {name:"Ask for Alonzo",cuisine:"Western",health:"red",dist:200,google:4.5,openrice:4.3,healthy:"Seared tuna salad | White wine clams",watch:"Creamy risotto | Tiramisu",addr:"Shop 6, G/F, PCCW Tower, 979 King's Rd"},
+  {name:"Enoteca Quarry Bay",cuisine:"Western",health:"red",dist:500,google:4.0,openrice:3.9,healthy:"Anchovies | Grilled prawns | Seared tuna",watch:"Heavy pasta | Wine calories",addr:"G/F, 35-41 Tong Chong St, Tai Koo Fong"},
+  {name:"Grotto",cuisine:"Western",health:"red",dist:230,google:null,openrice:null,healthy:"Salads | Grilled options | Coffee",watch:"Rich pasta | Croffles",addr:"G/F, Oceanic Building, 19 Hoi Chak St"},
+  {name:"Lilium",cuisine:"Western",health:"red",dist:80,google:null,openrice:null,healthy:"Salad-based mains | Grilled proteins",watch:"Cream-based dishes",addr:"Quarry Bay"},
+  {name:"Camper's 野營者",cuisine:"Western",health:"red",dist:200,google:null,openrice:null,healthy:"15 Veg Curry Rice | Lighter noodle sets",watch:"Slow-cooked pork udon | Beef rib curry",addr:"13A Pan Hoi St"},
+  {name:"Autmn Felling 秋落",cuisine:"Western",health:"red",dist:170,google:null,openrice:null,healthy:"Salads | Lighter café mains",watch:"Pastries | Creamy desserts",addr:"Quarry Bay"},
+  {name:"Levain Bakery 酵母",cuisine:"Western",health:"red",dist:350,google:null,openrice:null,healthy:"Wholegrain sourdough | Light café meals",watch:"Pastries | Croissants | Sweet drinks",addr:"Quarry Bay"},
+  {name:"Komeda Coffee コメダ珈琲店",cuisine:"Western",health:"red",dist:999,google:null,openrice:null,healthy:"Black coffee | Morning toast set | Salads",watch:"Shiro Noir dessert | Cream pastries",addr:"3/F, AEON STYLE, Kornhill Plaza South"},
+];
+
+const PALETTES = {
+  green:  ["#1b5e20","#2e7d32","#388e3c","#43a047","#4caf50","#66bb6a","#81c784","#a5d6a7"],
+  yellow: ["#e65100","#ef6c00","#f57c00","#fb8c00","#ff9800","#ffa726","#ffb74d","#ffcc02"],
+  red:    ["#7b1fa2","#8e24aa","#6a1b9a","#4a148c","#880e4f","#ad1457","#c2185b","#d81b60"],
+  all:    ["#1b5e20","#e65100","#7b1fa2","#1565c0","#b71c1c","#004d40","#827717","#4a148c","#01579b","#33691e"],
+};
+
+let spinning = false;
+let angle = 0;
+let filtered = [];
+
+function getFiltered() {
+  const h = document.getElementById('filterHealth').value;
+  const c = document.getElementById('filterCuisine').value;
+  const d = document.getElementById('filterDist').value;
+  return R.filter(r => {
+    if (h !== 'all' && r.health !== h) return false;
+    if (c !== 'all' && r.cuisine !== c) return false;
+    if (d === 'close' && r.dist > 200) return false;
+    if (d === 'medium' && r.dist > 400) return false;
+    if (d === 'kornhill' && r.dist >= 999) return false;
+    return true;
+  });
+}
+
+function drawWheel(a, list) {
+  const canvas = document.getElementById('wheel');
+  const ctx = canvas.getContext('2d');
+  const cx = 150, cy = 150, r = 146;
+  ctx.clearRect(0,0,300,300);
+
+  if (!list.length) {
+    ctx.beginPath(); ctx.arc(cx,cy,r,0,2*Math.PI);
+    ctx.fillStyle = '#1e1e28'; ctx.fill();
+    ctx.fillStyle = '#555'; ctx.font = '13px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('No matches', cx, cy);
+    return;
+  }
+
+  const n = list.length;
+  const slice = (2*Math.PI)/n;
+  const hKey = document.getElementById('filterHealth').value;
+  const palette = PALETTES[hKey] || PALETTES.all;
+
+  list.forEach((item, i) => {
+    const s = a + i*slice, e = s+slice;
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,r,s,e); ctx.closePath();
+    ctx.fillStyle = palette[i % palette.length]; ctx.fill();
+    ctx.strokeStyle = '#0f0f13'; ctx.lineWidth = 2; ctx.stroke();
+
+    ctx.save(); ctx.translate(cx,cy); ctx.rotate(s+slice/2); ctx.textAlign='right';
+    ctx.fillStyle='rgba(255,255,255,0.92)';
+    const fs = n>20?7:n>14?9:n>8?10:12;
+    ctx.font=`bold ${fs}px sans-serif`;
+    const lbl = item.name.length>18 ? item.name.slice(0,17)+'…' : item.name;
+    ctx.fillText(lbl, r-6, fs/3);
+    ctx.restore();
+  });
+
+  // Center hub
+  ctx.beginPath(); ctx.arc(cx,cy,26,0,2*Math.PI);
+  ctx.fillStyle='#0f0f13'; ctx.fill();
+  ctx.strokeStyle='#2a2a3a'; ctx.lineWidth=2; ctx.stroke();
+  ctx.font='18px sans-serif'; ctx.textAlign='center'; ctx.fillText('🎰',cx,cy+6);
+}
+
+function updateUI() {
+  filtered = getFiltered();
+  drawWheel(angle, filtered);
+  document.getElementById('countBadge').textContent = `${filtered.length} restaurant${filtered.length!==1?'s':''} in the mix`;
+  document.getElementById('emptyMsg').style.display = filtered.length===0?'block':'none';
+  document.getElementById('spinBtn').disabled = filtered.length===0;
+  document.getElementById('resultCard').classList.remove('show');
+}
+
+function spin() {
+  filtered = getFiltered();
+  if (!filtered.length || spinning) return;
+  spinning = true;
+  document.getElementById('spinBtn').disabled = true;
+  document.getElementById('resultCard').classList.remove('show');
+
+  const n = filtered.length;
+  const slice = (2*Math.PI)/n;
+  const winIdx = Math.floor(Math.random()*n);
+  const spins = 6 + Math.random()*4;
+  const target = angle - (winIdx*slice + slice/2 + Math.PI/2) + spins*2*Math.PI;
+  const start = angle;
+  const t0 = performance.now();
+  const dur = 3800 + Math.random()*1200;
+
+  function ease(t){ return 1-Math.pow(1-t,4); }
+
+  (function frame(now){
+    const t = Math.min((now-t0)/dur, 1);
+    angle = start + (target-start)*ease(t);
+    drawWheel(angle, filtered);
+    if(t<1){ requestAnimationFrame(frame); }
+    else {
+      angle = ((target % (2*Math.PI)) + 2*Math.PI) % (2*Math.PI);
+      spinning = false;
+      document.getElementById('spinBtn').disabled = false;
+      showResult(filtered[winIdx]);
+    }
+  })(t0);
+}
+
+function showResult(r) {
+  document.getElementById('rName').textContent = r.name;
+  const ratings = [r.google?`⭐ ${r.google}`:null, r.openrice?`🍚 ${r.openrice}`:null].filter(Boolean);
+  document.getElementById('rMeta').textContent = ratings.length ? ratings.join('  |  ') : 'No ratings listed';
+  const hl = {green:'🟢 Healthiest',yellow:'🟡 Moderate',red:'🔴 Indulge'}[r.health];
+  const hc = {green:'tag-green',yellow:'tag-yellow',red:'tag-red'}[r.health];
+  const distTag = r.dist<999 ? `<span class="tag tag-purple">${r.dist}m away</span>` : `<span class="tag tag-purple">Kornhill Plaza</span>`;
+  document.getElementById('rTags').innerHTML = `<span class="tag ${hc}">${hl}</span><span class="tag tag-blue">${r.cuisine}</span>${distTag}`;
+  document.getElementById('rHealthy').textContent = r.healthy || '—';
+  document.getElementById('rWatch').textContent = r.watch || '—';
+  document.getElementById('rAddr').textContent = r.addr || '—';
+  document.getElementById('rMaps').href = `https://maps.google.com/search?q=${encodeURIComponent(r.name+' '+r.addr+' Hong Kong')}`;
+  document.getElementById('resultCard').classList.add('show');
+}
+
+['filterHealth','filterCuisine','filterDist'].forEach(id =>
+  document.getElementById(id).addEventListener('change', updateUI)
+);
+updateUI();
+</script>
+</body>
+</html>
